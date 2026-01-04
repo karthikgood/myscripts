@@ -1,4 +1,7 @@
   git config --global user.email "karthikgood@gmail.com"
   git config --global user.name "karthikgood"
   git remote set-url origin https://{MYPERSONAL_GITHUB_TOKEN}@github.com/karthikgood/myscripts
+  stage and commit
   git push origin main
+  git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
+

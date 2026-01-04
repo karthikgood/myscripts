@@ -1,0 +1,63 @@
+---
+- name: Install VS Code with Fixed GPG Key
+  hosts: eatlng
+  become: true
+  tasks:
+    - name: Ensure /etc/apt/keyrings directory exists
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Download Microsoft GPG key
+      ansible.builtin.get_url:
+        url: https://packages.microsoft.com/keys/microsoft.asc
+        dest: /etc/apt/keyrings/microsoft.asc
+        mode: '0644'
+
+    - name: Add VS Code repository with signed-by
+      ansible.builtin.apt_repository:
+        # The [signed-by=...] part is critical to resolve the NO_PUBKEY error
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/microsoft.asc] https://packages.microsoft.com/repos/code stable main"
+        state: present
+        filename: vscode
+        update_cache: yes
+
+    - name: Install Visual Studio Code
+      ansible.builtin.apt:
+        name: code
+        state: present
+
+    # The following tasks install extensions for the 'current' remote user.
+    # To run this for specific users, you may need to adjust the `become` directive
+    # and specify the correct user's home directory.
+
+    - name: Install required VS Code extensions
+      ansible.builtin.command: "code --install-extension {{ item }} --force"
+      args:
+        creates: "~/.vscode/extensions/{{ item }}" # Prevent re-running if extension exists
+      loop:
+        - "ms-python.python"
+        - "redhat.ansible"
+        - "esbenp.prettier-vscode"
+        - "eamodio.gitlens"
+        - "github.codespaces"
+        - "github.copilot"
+        - "github.copilot-chat"
+        - "github.github-vscode-theme"
+        - "github.remotehub"
+        - "github.vscode-github-actions"
+        - "ms-azuretools.vscode-containers"
+        - "ms-kubernetes-tools.vscode-kubernetes-tools"
+        - "ms-vscode-remote.remote-ssh"
+        - "ms-vscode-remote.remote-ssh-edit"
+        - "ms-vscode.azure-repos"
+        - "ms-vscode.remote-explorer"
+        - "ms-vscode.remote-repositories"
+        - "redhat.vscode-yaml"
+        - "uloco.theme-bluloco-light"
+        - "vscodevim.vim"
+
+      # This task runs as the 'remote_user' defined in your inventory/ansible configuration, not as 'become: true' user
+      become: false 
+

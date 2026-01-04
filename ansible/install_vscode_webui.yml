@@ -1,0 +1,73 @@
+---
+- name: Install and Configure VS Code Web UI
+  hosts: eatlng
+  # Note: Do NOT use 'become: true' at the play level here. 
+  # We will escalate only for specific tasks.
+  vars:
+    vscode_web_password: "YourSecurePassword123"
+    listen_address: "0.0.0.0:8080"
+
+  tasks:
+    - name: Download and install code-server
+      become: true  # Only escalate for the system-wide installation
+      ansible.builtin.shell:
+        cmd: "curl -fsSL code-server.dev | sh"
+        creates: /usr/bin/code-server
+
+    - name: Ensure configuration directory exists
+      # Running as local user (become: false)
+      ansible.builtin.file:
+        # Use the fact 'ansible_user_dir' instead of 'ansible_env.HOME'
+        path: "{{ ansible_user_dir }}/.config/code-server"
+        state: directory
+        mode: '0755'
+
+    - name: Configure code-server settings
+      ansible.builtin.copy:  # Changed from template to copy
+        dest: "{{ ansible_user_dir }}/.config/code-server/config.yaml"
+        content: |
+          bind-addr: {{ listen_address }}
+          auth: password
+          password: {{ vscode_web_password }}
+          cert: false
+      become: false
+
+    - name: Enable and start code-server service
+      become: true
+      ansible.builtin.systemd:
+        # This starts the service for the user running the playbook
+        name: "code-server@{{ ansible_user_id }}"
+        enabled: yes
+        state: restarted
+        daemon_reload: yes
+    - name: Install extensions specifically for code-server
+      become: false
+      ansible.builtin.command:
+        # Use the code-server CLI to ensure they land in the web UI directory
+        cmd: "code-server --install-extension {{ item }} --force"
+      loop:
+        - "ms-python.python"
+        - "redhat.ansible"
+        - "esbenp.prettier-vscode"
+        - "eamodio.gitlens"
+        - "github.codespaces"
+        - "github.copilot"
+        - "github.copilot-chat"
+        - "github.github-vscode-theme"
+        - "github.remotehub"
+        - "github.vscode-github-actions"
+        - "ms-azuretools.vscode-containers"
+        - "ms-kubernetes-tools.vscode-kubernetes-tools"
+        - "ms-vscode-remote.remote-ssh"
+        - "ms-vscode-remote.remote-ssh-edit"
+        - "ms-vscode.azure-repos"
+        - "ms-vscode.remote-explorer"
+        - "ms-vscode.remote-repositories"
+        - "redhat.vscode-yaml"
+        - "uloco.theme-bluloco-light"
+        - "vscodevim.vim"
+        - "redhat.ansible"
+        - "ms-python.python"
+      register: ext_res
+      changed_when: "'is already installed' not in ext_res.stdout"
+
