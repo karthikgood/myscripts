@@ -1,0 +1,39 @@
+---
+- name: Install Rancher Desktop and Helm on Linux
+  hosts: localhost
+  become: true
+  tasks:
+    # --- RANCHER DESKTOP SECTION ---
+    - name: Install Rancher Desktop dependencies
+      apt:
+        name: [curl, gpg, apt-transport-https]
+        state: present
+
+    - name: Add Rancher Desktop GPG key
+      apt_key:
+        url: https://download.opensuse.org/repositories/isv:/Rancher:/stable/deb/Release.key
+        state: present
+        keyring: /usr/share/keyrings/isv-rancher-stable-archive-keyring.gpg
+
+    - name: Add Rancher Desktop repository
+      apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/isv-rancher-stable-archive-keyring.gpg] https://download.opensuse.org/repositories/isv:/Rancher:/stable/deb/ ./"
+        state: present
+
+    - name: Install Rancher Desktop
+      apt:
+        name: rancher-desktop
+        update_cache: yes
+        state: present
+
+    # --- HELM SECTION ---
+    - name: Download Helm installation script
+      get_url:
+        url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+        dest: /tmp/get_helm.sh
+        mode: '0700'
+
+    - name: Run Helm installation script
+      shell: /tmp/get_helm.sh
+      args:
+        creates: /usr/local/bin/helm
